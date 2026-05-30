@@ -114,6 +114,49 @@ public class ActivationApiTests : ApiTestBase
         Assert.That(body.Error, Is.EqualTo(expectedErrorMessage));
     }
 
+    [Test]
+    public async Task Should_return_correlation_id_when_header_is_provided()
+    {
+        var activationRequest = ActivationTestData.ValidActivationRequest();
+        var correlationId = Guid.NewGuid().ToString();
+
+        var response = await ActivationApiClient.ActivateSimAsync(
+            activationRequest,
+            token: "test-token",
+            correlationId: correlationId
+        );
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+
+        var body = JsonHelper.Deserialize<ActivationResponse>(response.Content!);
+
+        Assert.That(body.CorrelationId, Is.EqualTo(correlationId));
+    }
+
+    [Test]
+    public async Task Should_reject_activation_request_without_authorization_token()
+    {
+        var activationRequest = ActivationTestData.ValidActivationRequest();
+
+        var response = await ActivationApiClient.ActivateSimAsync(
+            activationRequest,
+            token: null
+        );
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Should_reject_activation_request_with_invalid_token()
+    {
+        var activationRequest = ActivationTestData.ValidActivationRequest();
+
+        var response = await ActivationApiClient.ActivateSimAsync(
+            activationRequest,
+            token: "wrong-token"
+        );
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
 }
 
 

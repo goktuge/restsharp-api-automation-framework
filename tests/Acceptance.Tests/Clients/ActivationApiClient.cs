@@ -19,9 +19,24 @@ public class ActivationApiClient
         return await _client.ExecuteAsync(request);
     }
 
-    public async Task<RestResponse> ActivateSimAsync(ActivationRequest activationRequest)
+    public async Task<RestResponse> ActivateSimAsync(
+        ActivationRequest activationRequest,
+        string? token = "test-token",
+        string? correlationId = null)
     {
         var request = new RestRequest("activations", Method.Post);
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.AddHeader("Authorization", $"Bearer {token}");
+        }
+        
+        if (!string.IsNullOrWhiteSpace(correlationId))
+        {
+            request.AddHeader("X-Correlation-Id", correlationId);
+        }
+
+
         request.AddJsonBody(activationRequest);
 
         return await _client.ExecuteAsync(request);

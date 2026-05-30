@@ -13,6 +13,7 @@ namespace Acceptance.Tests.Models
         string ActivationId,
         string PlanCode,
         string Status,
+        string CorrelationId,
         DateTimeOffset CreatedAtUtc
     );
 

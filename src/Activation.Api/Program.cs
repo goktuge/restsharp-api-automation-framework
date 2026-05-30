@@ -20,8 +20,18 @@ app.MapGet("/health", () =>
     });
 });
 
-app.MapPost("/activations", (ActivateSimRequest request) =>
+app.MapPost("/activations", (ActivateSimRequest request, HttpRequest httpRequest) =>
 {
+    var authorizationHeader = httpRequest.Headers["Authorization"].FirstOrDefault();
+
+    if (authorizationHeader != "Bearer test-token")
+    {
+        return Results.Unauthorized();
+    }
+
+    var correlationId = httpRequest.Headers["X-Correlation-Id"].FirstOrDefault()
+        ?? Guid.NewGuid().ToString();
+
     if (string.IsNullOrWhiteSpace(request.Iccid))
     {
         return Results.BadRequest(new
@@ -51,7 +61,8 @@ app.MapPost("/activations", (ActivateSimRequest request) =>
         Iccid: request.Iccid,
         CustomerId: request.CustomerId,
         Status: "Accepted",
-        CreatedAtUtc: DateTimeOffset.UtcNow
+        CreatedAtUtc: DateTimeOffset.UtcNow,
+        CorrelationId: correlationId
     );
 
     return Results.Accepted($"/activations/{response.ActivationId}", response);
@@ -70,5 +81,6 @@ public record ActivateSimResponse(
     string Iccid,
     string CustomerId,
     string Status,
+    string CorrelationId,
     DateTimeOffset CreatedAtUtc
 );
