@@ -30,7 +30,7 @@ public class ActivationApiClient
         {
             request.AddHeader("Authorization", $"Bearer {token}");
         }
-        
+
         if (!string.IsNullOrWhiteSpace(correlationId))
         {
             request.AddHeader("X-Correlation-Id", correlationId);
@@ -38,6 +38,47 @@ public class ActivationApiClient
 
 
         request.AddJsonBody(activationRequest);
+
+        return await _client.ExecuteAsync(request);
+    }
+
+    public async Task<RestResponse> GetActivationByIdAsync(
+    string activationId,
+    string? token = "test-token")
+    {
+        var request = new RestRequest("/activations/{activationId}", Method.Get);
+
+        request.AddUrlSegment("activationId", activationId);
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.AddHeader("Authorization", $"Bearer {token}");
+        }
+
+        return await _client.ExecuteAsync(request);
+    }
+
+    public async Task<RestResponse> GetActivationsAsync(
+    string? status = null,
+    string? customerId = null,
+    string? token = "test-token")
+    {
+        var request = new RestRequest("/activations", Method.Get);
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.AddHeader("Authorization", $"Bearer {token}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            request.AddQueryParameter("status", status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(customerId))
+        {
+            request.AddQueryParameter("customerId", customerId);
+        }
 
         return await _client.ExecuteAsync(request);
     }
