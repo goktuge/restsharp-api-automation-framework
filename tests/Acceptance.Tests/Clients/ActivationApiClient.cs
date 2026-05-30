@@ -82,4 +82,41 @@ public class ActivationApiClient
 
         return await _client.ExecuteAsync(request);
     }
+
+    public async Task<RestResponse> UpdateActivationStatusAsync(
+        string activationId,
+        UpdateActivationStatusRequest updateRequest,
+        string? token = "test-token"
+    )
+    {
+        var request = new RestRequest("/activations/{activationId}/status", Method.Patch);
+
+        request.AddUrlSegment("activationId", activationId);
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.AddHeader("Authorization", $"Bearer {token}");
+        }
+
+        request.AddJsonBody(updateRequest);
+
+        return await _client.ExecuteAsync(request);
+    }
+
+    public async Task<RestResponse> DeleteActivationAsync(
+    string activationId,
+    string? token = "test-token")
+    {
+        var request = new RestRequest("/activations/{activationId}", Method.Delete);
+
+        request.AddUrlSegment("activationId", activationId);
+
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.AddHeader("Authorization", $"Bearer {token}");
+        }
+
+        return await _client.ExecuteAsync(request);
+    }
 }

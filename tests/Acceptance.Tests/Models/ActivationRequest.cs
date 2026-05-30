@@ -20,4 +20,8 @@ namespace Acceptance.Tests.Models
     public record ErrorResponse(
         string Error
     );
+
+    public record UpdateActivationStatusRequest(
+    string Status
+);
 }

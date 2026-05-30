@@ -1,6 +1,9 @@
 using Acceptance.Tests.Clients;
 using RestSharp;
 using Acceptance.Tests.Helpers;
+using Acceptance.Tests.Models;
+using Acceptance.Tests.TestData;
+using System.Net;
 
 namespace Acceptance.Tests.Base;
 
@@ -17,6 +20,19 @@ public abstract class ApiTestBase
 
         _restClient = new RestClient(baseUrl);
         ActivationApiClient = new ActivationApiClient(_restClient);
+    }
+
+    protected async Task<(ActivationRequest Request, ActivationResponse Response)> CreateValidActivationAsync()
+    {
+        var activationRequest = ActivationTestData.ValidActivationRequest();
+
+        var createResponse = await ActivationApiClient.ActivateSimAsync(activationRequest);
+
+        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+
+        var createdActivation = JsonHelper.Deserialize<ActivationResponse>(createResponse.Content!);
+
+        return (activationRequest, createdActivation);
     }
 
     [TearDown]

@@ -161,13 +161,7 @@ public class ActivationApiTests : ApiTestBase
     [Test]
     public async Task Should_get_activation_by_id_after_successful_activation()
     {
-        var activationRequest = ActivationTestData.ValidActivationRequest();
-
-        var createResponse = await ActivationApiClient.ActivateSimAsync(activationRequest);
-
-        Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
-
-        var createdActivation = JsonHelper.Deserialize<ActivationResponse>(createResponse.Content!);
+        var (activationRequest, createdActivation) = await CreateValidActivationAsync();
 
         var getResponse = await ActivationApiClient.GetActivationByIdAsync(createdActivation.ActivationId);
 
@@ -229,9 +223,8 @@ public class ActivationApiTests : ApiTestBase
     }
 
     [Test]
-    public async Task test()
+    public async Task Should_filter_activations_by_status()
     {
-
         var activationRequest = ActivationTestData.ValidActivationRequest();
 
         var createResponse = await ActivationApiClient.ActivateSimAsync(activationRequest);
@@ -244,10 +237,68 @@ public class ActivationApiTests : ApiTestBase
 
         var activations = JsonHelper.Deserialize<List<ActivationResponse>>(listResponse.Content!);
 
-        foreach(var activation in activations)
+        foreach (var activation in activations)
         {
             Assert.That(activation.Status, Is.EqualTo("Accepted"));
         }
+    }
+
+    [Test]
+    public async Task Should_update_activation_status()
+    {
+        var (activationRequest, createdActivation) = await CreateValidActivationAsync();
+
+        var updateRequest = new UpdateActivationStatusRequest(
+             Status: "Completed"
+         );
+
+        var updateResponse = await ActivationApiClient.UpdateActivationStatusAsync(
+        createdActivation.ActivationId,
+        updateRequest);
+
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var updatedActivation = JsonHelper.Deserialize<ActivationResponse>(updateResponse.Content!);
+
+        Assert.That(updatedActivation.ActivationId, Is.EqualTo(createdActivation.ActivationId));
+        Assert.That(updatedActivation.Status, Is.EqualTo("Completed"));
+        Assert.That(updatedActivation.Iccid, Is.EqualTo(activationRequest.Iccid));
+        Assert.That(updatedActivation.CustomerId, Is.EqualTo(activationRequest.CustomerId));
+    }
+
+    [Test]
+    public async Task Should_return_not_found_when_updating_unknown_activation()
+    {
+        var unknownActivationId = Guid.NewGuid().ToString();
+
+        var updateRequest = new UpdateActivationStatusRequest(
+            Status: "Completed"
+        );
+
+        var response = await ActivationApiClient.UpdateActivationStatusAsync(
+            unknownActivationId,
+            updateRequest
+        );
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+
+        var body = JsonHelper.Deserialize<ErrorResponse>(response.Content!);
+
+        Assert.That(body.Error, Is.EqualTo("Activation not found"));
+    }
+
+    [Test]
+    public async Task Should_delete_activation_and_return_not_found_afterwards()
+    {
+        var (_, createdActivation) = await CreateValidActivationAsync();
+
+        var deleteResponse = await ActivationApiClient.DeleteActivationAsync(createdActivation.ActivationId);
+
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        var getResponse = await ActivationApiClient.GetActivationByIdAsync(createdActivation.ActivationId);
+
+        Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 }
 

@@ -121,6 +121,66 @@ app.MapGet("/activations", (
     return Results.Ok(results.ToList());
 });
 
+app.MapPatch("/activations/{activationId}/status", (
+    string activationId,
+    UpdateActivationStatusRequest request,
+    HttpRequest httpRequest) =>
+{
+    var authorizationHeader = httpRequest.Headers["Authorization"].FirstOrDefault();
+
+    if (authorizationHeader != "Bearer test-token")
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Status))
+    {
+        return Results.BadRequest(new
+        {
+            error = "Status is required"
+        });
+    }
+
+    if (!activations.TryGetValue(activationId, out var activation))
+    {
+        return Results.NotFound(new
+        {
+            error = "Activation not found"
+        });
+    }
+
+    var updatedActivation = activation with
+    {
+        Status = request.Status
+    };
+
+    activations[activationId] = updatedActivation;
+
+    return Results.Ok(updatedActivation);
+});
+
+app.MapDelete("/activations/{activationId}", (string activationId, HttpRequest httpRequest) =>
+{
+    var authorizationHeader = httpRequest.Headers["Authorization"].FirstOrDefault();
+
+    if (authorizationHeader != "Bearer test-token")
+    {
+        return Results.Unauthorized();
+    }
+
+    var removed = activations.Remove(activationId);
+
+    if (!removed)
+    {
+        return Results.NotFound(new
+        {
+            error = "Activation not found"
+        });
+    }
+
+    return Results.NoContent();
+});
+
 app.Run();
 
 public record ActivateSimRequest(
@@ -136,4 +196,8 @@ public record ActivateSimResponse(
     string Status,
     string CorrelationId,
     DateTimeOffset CreatedAtUtc
+);
+
+public record UpdateActivationStatusRequest(
+    string Status
 );
