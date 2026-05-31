@@ -34,8 +34,12 @@ public class ActivationApiTests : ApiTestBase
     {
         var response = await ActivationApiClient.GetHealthAsync();
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        Assert.That(response.Content, Does.Contain("Healthy"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(response.Content, Does.Contain("Healthy"));
+        }
+
     }
 
     [Test]
@@ -43,17 +47,19 @@ public class ActivationApiTests : ApiTestBase
     {
         var activationRequest = ActivationTestData.ValidActivationRequest();
 
-        var response = await ActivationApiClient.ActivateSimAsync(activationRequest);
+        var response = await ActivationApiClient.ActivateSimTypedAsync(activationRequest);
+        var responseBody = response.Body;
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            Assert.That(response, Is.Not.Null);
+            Assert.That(responseBody!.Status, Is.EqualTo("Accepted"));
+            Assert.That(responseBody.Iccid, Is.EqualTo(activationRequest.Iccid));
+            Assert.That(responseBody.CustomerId, Is.EqualTo(activationRequest.CustomerId));
+            Assert.That(responseBody.ActivationId, Is.Not.Empty);
+        }
 
-        var body = JsonHelper.Deserialize<ActivationResponse>(response.Content!);
-
-        Assert.That(body, Is.Not.Null);
-        Assert.That(body.Status, Is.EqualTo("Accepted"));
-        Assert.That(body.Iccid, Is.EqualTo(activationRequest.Iccid));
-        Assert.That(body.CustomerId, Is.EqualTo(activationRequest.CustomerId));
-        Assert.That(body.ActivationId, Is.Not.Empty);
     }
 
     // [Test]
@@ -107,11 +113,10 @@ public class ActivationApiTests : ApiTestBase
     {
         var response = await ActivationApiClient.ActivateSimAsync(activationRequest);
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var errorResponse = ApiResponseMapper.ToApiResponse<ErrorResponse>(response);
 
-        var body = JsonHelper.Deserialize<ErrorResponse>(response.Content!);
-
-        Assert.That(body.Error, Is.EqualTo(expectedErrorMessage));
+        Assert.That(errorResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(errorResponse.Body!.Error, Is.EqualTo(expectedErrorMessage));
     }
 
     [Test]
@@ -120,16 +125,15 @@ public class ActivationApiTests : ApiTestBase
         var activationRequest = ActivationTestData.ValidActivationRequest();
         var correlationId = Guid.NewGuid().ToString();
 
-        var response = await ActivationApiClient.ActivateSimAsync(
+        var response = await ActivationApiClient.ActivateSimTypedAsync(
             activationRequest,
             token: "test-token",
             correlationId: correlationId
         );
+
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+        Assert.That(response.Body!.CorrelationId, Is.EqualTo(correlationId));
 
-        var body = JsonHelper.Deserialize<ActivationResponse>(response.Content!);
-
-        Assert.That(body.CorrelationId, Is.EqualTo(correlationId));
     }
 
     [Test]
@@ -163,16 +167,20 @@ public class ActivationApiTests : ApiTestBase
     {
         var (activationRequest, createdActivation) = await CreateValidActivationAsync();
 
-        var getResponse = await ActivationApiClient.GetActivationByIdAsync(createdActivation.ActivationId);
+        var getResponse = await ActivationApiClient
+         .GetActivationByIdTypedAsync<ActivationResponse>(createdActivation.ActivationId);
 
         Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        var fetchedActivation = JsonHelper.Deserialize<ActivationResponse>(getResponse.Content!);
+        var fetchedActivation = getResponse.Body!;
 
-        Assert.That(fetchedActivation.ActivationId, Is.EqualTo(createdActivation.ActivationId));
-        Assert.That(fetchedActivation.Iccid, Is.EqualTo(activationRequest.Iccid));
-        Assert.That(fetchedActivation.CustomerId, Is.EqualTo(activationRequest.CustomerId));
-        Assert.That(fetchedActivation.Status, Is.EqualTo("Accepted"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(fetchedActivation.ActivationId, Is.EqualTo(createdActivation.ActivationId));
+            Assert.That(fetchedActivation.Iccid, Is.EqualTo(activationRequest.Iccid));
+            Assert.That(fetchedActivation.CustomerId, Is.EqualTo(activationRequest.CustomerId));
+            Assert.That(fetchedActivation.Status, Is.EqualTo("Accepted"));
+        }
     }
 
     [Test]
@@ -180,13 +188,11 @@ public class ActivationApiTests : ApiTestBase
     {
         var unknownActivationId = Guid.NewGuid().ToString();
 
-        var response = await ActivationApiClient.GetActivationByIdAsync(unknownActivationId);
+        var response = await ActivationApiClient.GetActivationByIdTypedAsync<ErrorResponse>(unknownActivationId);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(response.Body!.Error, Is.EqualTo("Activation not found"));
 
-        var body = JsonHelper.Deserialize<ErrorResponse>(response.Content!);
-
-        Assert.That(body.Error, Is.EqualTo("Activation not found"));
     }
 
     [Test]
@@ -199,16 +205,15 @@ public class ActivationApiTests : ApiTestBase
             CustomerId = customerId
         };
 
-        var createResponse = await ActivationApiClient.ActivateSimAsync(activationRequest);
+        var createResponse = await ActivationApiClient.ActivateSimTypedAsync(activationRequest);
 
         Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
-        var createdActivation = JsonHelper.Deserialize<ActivationResponse>(createResponse.Content!);
 
-        var listResponse = await ActivationApiClient.GetActivationsAsync(customerId: customerId);
+        var listResponse = await ActivationApiClient
+        .GetActivationsTypedAsync<List<ActivationResponse>>(customerId: customerId);
+        var activations = listResponse.Body!;
 
         Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-
-        var activations = JsonHelper.Deserialize<List<ActivationResponse>>(listResponse.Content!);
         Assert.That(activations, Is.Not.Empty);
 
         foreach (var activation in activations)
@@ -217,7 +222,7 @@ public class ActivationApiTests : ApiTestBase
         }
 
         Assert.That(
-            activations.Any(activation => activation.ActivationId == createdActivation.ActivationId),
+            activations.Any(activation => activation.ActivationId == createResponse.Body!.ActivationId),
             Is.True
         );
     }
@@ -231,11 +236,14 @@ public class ActivationApiTests : ApiTestBase
 
         Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
 
-        var listResponse = await ActivationApiClient.GetActivationsAsync(status: "Accepted");
+        var listResponse = await ActivationApiClient
+        .GetActivationsTypedAsync<List<ActivationResponse>>(status: "Accepted");
 
         Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        var activations = JsonHelper.Deserialize<List<ActivationResponse>>(listResponse.Content!);
+        var activations = listResponse.Body!;
+
+        Assert.That(activations, Is.Not.Empty);
 
         foreach (var activation in activations)
         {
@@ -252,18 +260,21 @@ public class ActivationApiTests : ApiTestBase
              Status: "Completed"
          );
 
-        var updateResponse = await ActivationApiClient.UpdateActivationStatusAsync(
+        var updateResponse = await ActivationApiClient.UpdateActivationStatusTypedAsync<ActivationResponse>(
         createdActivation.ActivationId,
         updateRequest);
 
         Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        var updatedActivation = JsonHelper.Deserialize<ActivationResponse>(updateResponse.Content!);
+        var updatedActivation = updateResponse.Body!;
 
-        Assert.That(updatedActivation.ActivationId, Is.EqualTo(createdActivation.ActivationId));
-        Assert.That(updatedActivation.Status, Is.EqualTo("Completed"));
-        Assert.That(updatedActivation.Iccid, Is.EqualTo(activationRequest.Iccid));
-        Assert.That(updatedActivation.CustomerId, Is.EqualTo(activationRequest.CustomerId));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(updatedActivation.ActivationId, Is.EqualTo(createdActivation.ActivationId));
+            Assert.That(updatedActivation.Status, Is.EqualTo("Completed"));
+            Assert.That(updatedActivation.Iccid, Is.EqualTo(activationRequest.Iccid));
+            Assert.That(updatedActivation.CustomerId, Is.EqualTo(activationRequest.CustomerId));
+        }
     }
 
     [Test]
@@ -275,16 +286,16 @@ public class ActivationApiTests : ApiTestBase
             Status: "Completed"
         );
 
-        var response = await ActivationApiClient.UpdateActivationStatusAsync(
+        var response = await ActivationApiClient.UpdateActivationStatusTypedAsync<ErrorResponse>(
             unknownActivationId,
             updateRequest
         );
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
 
-        var body = JsonHelper.Deserialize<ErrorResponse>(response.Content!);
+        var body = response.Body;
 
-        Assert.That(body.Error, Is.EqualTo("Activation not found"));
+        Assert.That(body!.Error, Is.EqualTo("Activation not found"));
     }
 
     [Test]

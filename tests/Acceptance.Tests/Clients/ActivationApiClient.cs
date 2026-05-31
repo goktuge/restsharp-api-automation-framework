@@ -1,6 +1,7 @@
 using Acceptance.Tests.Models;
 using RestSharp;
 using Acceptance.Tests.Core;
+using Acceptance.Tests.Helpers;
 
 namespace Acceptance.Tests.Clients;
 
@@ -44,7 +45,6 @@ public class ActivationApiClient
         {
             request.AddHeader("X-Correlation-Id", correlationId);
         }
-
 
         request.AddJsonBody(activationRequest);
 
@@ -147,5 +147,62 @@ public class ActivationApiClient
             _client,
             request
         );
+    }
+
+    public async Task<ApiResponse<ActivationResponse>> ActivateSimTypedAsync(
+    ActivationRequest activationRequest,
+    string? token = "test-token",
+    string? correlationId = null)
+    {
+        var response = await ActivateSimAsync(
+            activationRequest,
+            token,
+            correlationId
+        );
+
+        return ApiResponseMapper.ToApiResponse<ActivationResponse>(response);
+    }
+
+    public async Task<ApiResponse<TResponse>> GetActivationByIdTypedAsync<TResponse>(
+    string activationId,
+    string? token = "test-token")
+    {
+        var request = new RestRequest("/activations/{activationId}", Method.Get);
+        request.AddUrlSegment("activationId", activationId);
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.AddHeader("Authorization", $"Bearer {token}");
+        }
+
+        return await _executor.ExecuteTypedAsync<TResponse>(
+            "GET /activations/{activationId}",
+            _client,
+            request
+        );
+    }
+
+    public async Task<ApiResponse<TResponse>> GetActivationsTypedAsync<TResponse>(
+    string? status = null,
+    string? customerId = null,
+    string? token = "test-token")
+    {
+        var response = await GetActivationsAsync(status, customerId, token);
+
+        return ApiResponseMapper.ToApiResponse<TResponse>(response);
+    }
+
+    public async Task<ApiResponse<TResponse>> UpdateActivationStatusTypedAsync<TResponse>(
+    string activationId,
+    UpdateActivationStatusRequest updateRequest,
+    string? token = "test-token")
+    {
+        var response = await UpdateActivationStatusAsync(
+            activationId,
+            updateRequest,
+            token
+        );
+
+        return ApiResponseMapper.ToApiResponse<TResponse>(response);
     }
 }

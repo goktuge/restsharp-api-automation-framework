@@ -1,4 +1,5 @@
 using RestSharp;
+using Acceptance.Tests.Helpers;
 
 namespace Acceptance.Tests.Core;
 
@@ -26,5 +27,15 @@ public class ApiRequestExecutor
         ));
 
         return response;
+    }
+
+    public async Task<ApiResponse<TResponse>> ExecuteTypedAsync<TResponse>(
+    string operationName,
+    RestClient client,
+    RestRequest request)
+    {
+        var response = await ExecuteAsync(operationName, client, request);
+
+        return ApiResponseMapper.ToApiResponse<TResponse>(response);
     }
 }
