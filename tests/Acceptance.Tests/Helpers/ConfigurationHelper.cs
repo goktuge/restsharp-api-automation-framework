@@ -14,4 +14,21 @@ public static class ConfigurationHelper
         return Configuration["ApiSettings:BaseUrl"]
             ?? throw new InvalidOperationException("ApiSettings:BaseUrl is not configured.");
     }
+
+    public static int GetTimeoutSeconds()
+    {
+        var timeoutValue = Configuration["ApiSettings:TimeoutSeconds"];
+
+        if (string.IsNullOrWhiteSpace(timeoutValue))
+        {
+            return 30;
+        }
+
+        if (!int.TryParse(timeoutValue, out var timeoutSeconds))
+        {
+            throw new InvalidOperationException("ApiSettings:TimeoutSeconds must be a valid number.");
+        }
+
+        return timeoutSeconds;
+    }
 }

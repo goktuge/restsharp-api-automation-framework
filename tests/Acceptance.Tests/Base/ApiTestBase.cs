@@ -17,8 +17,14 @@ public abstract class ApiTestBase
     public void SetUp()
     {
         var baseUrl = ConfigurationHelper.GetBaseUrl();
+        var timeoutSeconds = ConfigurationHelper.GetTimeoutSeconds();
 
-        _restClient = new RestClient(baseUrl);
+        var options = new RestClientOptions(baseUrl)
+        {
+            Timeout = TimeSpan.FromSeconds(timeoutSeconds)
+        };
+
+        _restClient = new RestClient(options);
         ActivationApiClient = new ActivationApiClient(_restClient);
     }
 
