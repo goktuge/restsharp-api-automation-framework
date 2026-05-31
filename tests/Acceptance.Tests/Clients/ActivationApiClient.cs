@@ -1,5 +1,6 @@
 using Acceptance.Tests.Models;
 using RestSharp;
+using Acceptance.Tests.Core;
 
 namespace Acceptance.Tests.Clients;
 
@@ -7,16 +8,24 @@ public class ActivationApiClient
 {
 
     private readonly RestClient _client;
+    private readonly ApiRequestExecutor _executor;
 
-    public ActivationApiClient(RestClient client)
+    public ActivationApiClient(
+        RestClient client,
+        ApiRequestExecutor? executor = null)
     {
         _client = client;
+        _executor = executor ?? new ApiRequestExecutor(new ApiCallContext());
     }
 
     public async Task<RestResponse> GetHealthAsync()
     {
         var request = new RestRequest("/health", Method.Get);
-        return await _client.ExecuteAsync(request);
+        return await _executor.ExecuteAsync(
+            "GET /health",
+            _client,
+            request
+        );
     }
 
     public async Task<RestResponse> ActivateSimAsync(
@@ -39,7 +48,11 @@ public class ActivationApiClient
 
         request.AddJsonBody(activationRequest);
 
-        return await _client.ExecuteAsync(request);
+        return await _executor.ExecuteAsync(
+            "POST /activations",
+            _client,
+            request
+        );
     }
 
     public async Task<RestResponse> GetActivationByIdAsync(
@@ -55,7 +68,11 @@ public class ActivationApiClient
             request.AddHeader("Authorization", $"Bearer {token}");
         }
 
-        return await _client.ExecuteAsync(request);
+        return await _executor.ExecuteAsync(
+            "GET /activations",
+            _client,
+            request
+        );
     }
 
     public async Task<RestResponse> GetActivationsAsync(
@@ -80,7 +97,11 @@ public class ActivationApiClient
             request.AddQueryParameter("customerId", customerId);
         }
 
-        return await _client.ExecuteAsync(request);
+        return await _executor.ExecuteAsync(
+            "GET /activations/{activationId}",
+            _client,
+            request
+        );
     }
 
     public async Task<RestResponse> UpdateActivationStatusAsync(
@@ -100,7 +121,11 @@ public class ActivationApiClient
 
         request.AddJsonBody(updateRequest);
 
-        return await _client.ExecuteAsync(request);
+        return await _executor.ExecuteAsync(
+            "PATCH /activations/{activationId}/status",
+            _client,
+            request
+        );
     }
 
     public async Task<RestResponse> DeleteActivationAsync(
@@ -117,6 +142,10 @@ public class ActivationApiClient
             request.AddHeader("Authorization", $"Bearer {token}");
         }
 
-        return await _client.ExecuteAsync(request);
+        return await _executor.ExecuteAsync(
+            "DELETE /activations/{activationId}",
+            _client,
+            request
+        );
     }
 }

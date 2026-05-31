@@ -4,6 +4,8 @@ using Acceptance.Tests.Helpers;
 using Acceptance.Tests.Models;
 using Acceptance.Tests.TestData;
 using System.Net;
+using Acceptance.Tests.Core;
+using NUnit.Framework.Interfaces;
 
 namespace Acceptance.Tests.Base;
 
@@ -12,6 +14,7 @@ public abstract class ApiTestBase
 
     protected ActivationApiClient ActivationApiClient { get; private set; } = null!;
     private RestClient _restClient = null!;
+    private ApiCallContext _apiCallContext = null!;
 
     [SetUp]
     public void SetUp()
@@ -25,7 +28,11 @@ public abstract class ApiTestBase
         };
 
         _restClient = new RestClient(options);
-        ActivationApiClient = new ActivationApiClient(_restClient);
+
+        _apiCallContext = new ApiCallContext();
+        var executor = new ApiRequestExecutor(_apiCallContext);
+
+        ActivationApiClient = new ActivationApiClient(_restClient, executor);
     }
 
     protected async Task<(ActivationRequest Request, ActivationResponse Response)> CreateValidActivationAsync()
@@ -42,8 +49,16 @@ public abstract class ApiTestBase
     }
 
     [TearDown]
-    public void TearDown()
+    public void BaseTearDown()
     {
+        if (TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Failed)
+        {
+            ApiLogger.LogCalls(
+                TestContext.CurrentContext.Test.Name,
+                _apiCallContext.Calls
+            );
+        }
+
         _restClient.Dispose();
     }
 }

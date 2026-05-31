@@ -31,4 +31,23 @@ public static class ConfigurationHelper
 
         return timeoutSeconds;
     }
+
+    public static bool IsApiLoggingEnabled()
+    {
+        var environmentValue = Environment.GetEnvironmentVariable("API_LOGGING");
+
+        if (bool.TryParse(environmentValue, out var environmentLoggingEnabled))
+        {
+            return environmentLoggingEnabled;
+        }
+
+        var configValue = Configuration["ApiSettings:EnableApiLogging"];
+
+        if (bool.TryParse(configValue, out var configLoggingEnabled))
+        {
+            return configLoggingEnabled;
+        }
+
+        return false;
+    }
 }
