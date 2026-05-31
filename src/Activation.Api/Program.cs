@@ -2,6 +2,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 
+builder.Services.AddHttpClient("ProvisioningProvider", client =>
+{
+    var baseUrl = builder.Configuration["ProvisioningProvider:BaseUrl"]
+        ?? "http://localhost:9099";
+
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+
 var app = builder.Build();
 
 var activations = new Dictionary<string, ActivateSimResponse>();
@@ -22,7 +31,10 @@ app.MapGet("/health", () =>
     });
 });
 
-app.MapPost("/activations", (ActivateSimRequest request, HttpRequest httpRequest) =>
+app.MapPost("/activations", async (
+    ActivateSimRequest request,
+    HttpRequest httpRequest,
+    IHttpClientFactory httpClientFactory) =>
 {
     var authorizationHeader = httpRequest.Headers["Authorization"].FirstOrDefault();
 
@@ -56,6 +68,26 @@ app.MapPost("/activations", (ActivateSimRequest request, HttpRequest httpRequest
         {
             error = "PlanCode is required"
         });
+    }
+
+    var provisioningClient = httpClientFactory.CreateClient("ProvisioningProvider");
+
+    var provisioningResponse = await provisioningClient.PostAsJsonAsync(
+        "/provision",
+        new
+        {
+            iccid = request.Iccid,
+            customerId = request.CustomerId,
+            planCode = request.PlanCode
+        }
+    );
+
+    if (!provisioningResponse.IsSuccessStatusCode)
+    {
+        return Results.Problem(
+            detail: "Provisioning provider failed",
+            statusCode: StatusCodes.Status502BadGateway
+        );
     }
 
     var response = new ActivateSimResponse(
