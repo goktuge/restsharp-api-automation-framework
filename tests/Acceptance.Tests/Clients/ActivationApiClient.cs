@@ -149,7 +149,7 @@ public class ActivationApiClient
         );
     }
 
-    public async Task<ApiResponse<ActivationResponse>> ActivateSimTypedAsync(
+    public async Task<ApiResponse<TResponse>> ActivateSimTypedAsync<TResponse>(
     ActivationRequest activationRequest,
     string? token = "test-token",
     string? correlationId = null)
@@ -160,7 +160,7 @@ public class ActivationApiClient
             correlationId
         );
 
-        return ApiResponseMapper.ToApiResponse<ActivationResponse>(response);
+        return ApiResponseMapper.ToApiResponse<TResponse>(response);
     }
 
     public async Task<ApiResponse<TResponse>> GetActivationByIdTypedAsync<TResponse>(

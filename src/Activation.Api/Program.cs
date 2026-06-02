@@ -70,6 +70,17 @@ app.MapPost("/activations", async (
         });
     }
 
+    var existingActivation = activations.Values
+        .FirstOrDefault(activation => activation.Iccid == request.Iccid);
+
+    if (existingActivation is not null)
+    {
+        return Results.Conflict(new
+        {
+            error = "SIM is already activated"
+        });
+    }
+
     var provisioningClient = httpClientFactory.CreateClient("ProvisioningProvider");
 
     var provisioningResponse = await provisioningClient.PostAsJsonAsync(

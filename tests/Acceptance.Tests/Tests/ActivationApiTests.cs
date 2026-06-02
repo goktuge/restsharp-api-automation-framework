@@ -47,13 +47,14 @@ public class ActivationApiTests : ApiTestBase
     {
         var activationRequest = ActivationTestData.ValidActivationRequest();
 
-        var response = await ActivationApiClient.ActivateSimTypedAsync(activationRequest);
+        var response = await ActivationApiClient.ActivateSimTypedAsync<ActivationResponse>(activationRequest);
+
         var responseBody = response.Body;
+        Assert.That(responseBody, Is.Not.Null);
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
-            Assert.That(response, Is.Not.Null);
             Assert.That(responseBody!.Status, Is.EqualTo("Accepted"));
             Assert.That(responseBody.Iccid, Is.EqualTo(activationRequest.Iccid));
             Assert.That(responseBody.CustomerId, Is.EqualTo(activationRequest.CustomerId));
@@ -125,7 +126,7 @@ public class ActivationApiTests : ApiTestBase
         var activationRequest = ActivationTestData.ValidActivationRequest();
         var correlationId = Guid.NewGuid().ToString();
 
-        var response = await ActivationApiClient.ActivateSimTypedAsync(
+        var response = await ActivationApiClient.ActivateSimTypedAsync<ActivationResponse>(
             activationRequest,
             token: "test-token",
             correlationId: correlationId
@@ -205,7 +206,7 @@ public class ActivationApiTests : ApiTestBase
             CustomerId = customerId
         };
 
-        var createResponse = await ActivationApiClient.ActivateSimTypedAsync(activationRequest);
+        var createResponse = await ActivationApiClient.ActivateSimTypedAsync<ActivationResponse>(activationRequest);
 
         Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
 
@@ -310,6 +311,19 @@ public class ActivationApiTests : ApiTestBase
         var getResponse = await ActivationApiClient.GetActivationByIdAsync(createdActivation.ActivationId);
 
         Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
+    public async Task Should_reject_duplicate_activation_request()
+    {
+        var activationRequest = ActivationTestData.ValidActivationRequest();
+
+        var firstResponse = await ActivationApiClient.ActivateSimTypedAsync<ActivationResponse>(activationRequest);
+        var secondResponse = await ActivationApiClient.ActivateSimTypedAsync<ErrorResponse>(activationRequest);
+
+        Assert.That(firstResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+        Assert.That(secondResponse.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        Assert.That(secondResponse.Body!.Error, Is.EqualTo("SIM is already activated"));
     }
 }
 

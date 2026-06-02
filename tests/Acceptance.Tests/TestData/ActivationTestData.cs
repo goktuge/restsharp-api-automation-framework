@@ -7,7 +7,7 @@ public static class ActivationTestData
     public static ActivationRequest ValidActivationRequest()
     {
         return new ActivationRequest(
-            Iccid: "8935312345678901234",
+            Iccid: $"customer-{Guid.NewGuid():N}",
             CustomerId: "customer-001",
             PlanCode: "EU_5GB"
         );
@@ -25,7 +25,7 @@ public static class ActivationTestData
     public static ActivationRequest RequestWithoutCustomerId()
     {
         return new ActivationRequest(
-            Iccid: "8935312345678901234",
+            Iccid: $"customer-{Guid.NewGuid():N}",
             CustomerId: "",
             PlanCode: "EU_5GB"
         );
@@ -34,7 +34,7 @@ public static class ActivationTestData
     public static ActivationRequest RequestWithoutPlanCode()
     {
         return new ActivationRequest(
-            Iccid: "8935312345678901234",
+            Iccid: $"customer-{Guid.NewGuid():N}",
             CustomerId: "customer-001",
             PlanCode: ""
         );
